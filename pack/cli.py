@@ -42,9 +42,15 @@ def main(
         bool,
         typer.Option(
             help=Constants.DELETE_ORIGINAL_HELP_TEXT,
-            rich_help_panel=Constants.UTILS_PANEL_TEXT,
         ),
     ] = False,
+    bitrate_factor: Annotated[
+        float,
+        typer.Option(
+            show_default=True,
+            help=Constants.BITRATE_FACTOR_HELP_TEXT,
+        ),
+    ] = 1.0,
     debug: Annotated[
         bool,
         typer.Option(
@@ -69,7 +75,12 @@ def main(
                 style="green",
                 markup=False,
             )
-            compress_video(input_file=input, output_file=output, overwrite=overwrite)
+            compress_video(
+                input_file=input,
+                output_file=output,
+                overwrite=overwrite,
+                bitrate_factor=bitrate_factor,
+            )
             if delete_original:
                 delete_path(input)
         except FFmpegError as e:
@@ -102,6 +113,7 @@ def main(
                 compress_video(
                     input_file=video_path,
                     overwrite=overwrite,
+                    bitrate_factor=bitrate_factor,
                 )
                 if delete_original:
                     delete_path(video_path)

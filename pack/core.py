@@ -4,8 +4,29 @@ import re
 from ffmpeg import FFmpeg, Progress  # type: ignore
 from rich.progress import Progress as ProgressBar
 
-from .constants import Constants
+from .constants import BitrateUnit, Constants
 from .helpers import add_affixes
+
+
+def _get_bitrate(path: str, unit: BitrateUnit = BitrateUnit.KBPS) -> tuple[int, int]:
+    """
+    Get the bitrate values of a video [bitrate video, bitrate audio] in BitrateUnit.
+    Args:
+        path (str): The path to the video file.
+        unit (BitrateUnit): The unit to use for the bitrate values. Default is BitrateUnit.KBPS.
+
+    Returns:
+        tuple[int, int]: A tuple containing the bitrate values for the video file in the specified unit.
+    """
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        path,
+        print_format="json",
+        show_streams=None,
+    )
+    media = json.loads(ffprobe.execute())
+    bv = int(media["streams"][0]["bit_rate"])
+    ba = int(media["streams"][1]["bit_rate"])
+    return (int(bv / unit.value), int(ba / unit.value))
 
 
 def _get_duration(path: str) -> float:
@@ -46,6 +67,7 @@ def compress_video(
     input_file: str,
     output_file: str | None = None,
     overwrite: bool = False,
+    bitrate_factor: float = 1.0,
 ):
     """
     Compress a video file using FFmpeg and display the progress in a terminal.
@@ -63,11 +85,24 @@ def compress_video(
     else:
         output = add_affixes(input_file, suffix=Constants.COMPRESSED_SUFFIX)
 
+    bv, ba = _get_bitrate(input_file, BitrateUnit.KBPS)
+
+    extra_options: dict[str, str] = {}
+
+    if bitrate_factor < 1.0:
+        extra_options["b:v"] = f"{bv*bitrate_factor}k"
+        extra_options["b:a"] = f"{ba*bitrate_factor}k"
+
     ffmpeg = (
         FFmpeg()
         .option("y" if overwrite else "n")
         .input(input_file)
-        .output(output, vcodec="h264", acodec="aac")
+        .output(
+            output,
+            extra_options,
+            vcodec="h264",
+            acodec="aac",
+        )
     )
 
     with ProgressBar() as progress_bar:

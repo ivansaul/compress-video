@@ -10,8 +10,12 @@
     },
     "cSpell.words": [
         "acodec",
+        "bitrate",
         "ffprobe",
         "ivansaul",
+        "kbps",
+        "mbps",
+        "MBPS",
         "typer",
         "vcodec"
     ],
